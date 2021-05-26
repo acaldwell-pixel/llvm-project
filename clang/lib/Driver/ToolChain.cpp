@@ -401,6 +401,8 @@ StringRef ToolChain::getOSLibName() const {
     return "sunos";
   case llvm::Triple::AIX:
     return "aix";
+  case llvm::Triple::AstraeaOS:
+    return "astraeaos";
   default:
     return getOS();
   }
