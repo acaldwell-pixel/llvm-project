@@ -559,6 +559,8 @@ TargetInfo *AllocateTarget(const llvm::Triple &Triple,
         return new AndroidX86_64TargetInfo(Triple, Opts);
       }
     }
+    case llvm::Triple::AstraeaOS:
+      return new AstraeaOSTargetInfo<X86_64TargetInfo>(Triple, Opts);
     case llvm::Triple::DragonFly:
       return new DragonFlyBSDTargetInfo<X86_64TargetInfo>(Triple, Opts);
     case llvm::Triple::NetBSD:
