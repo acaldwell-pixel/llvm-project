@@ -214,7 +214,7 @@ option(COMPILER_RT_EXCLUDE_ATOMIC_BUILTIN
   "Skip the atomic builtin (these should normally be provided by a shared library)"
   On)
 
-if(NOT FUCHSIA AND NOT COMPILER_RT_BAREMETAL_BUILD)
+if(NOT FUCHSIA AND NOT COMPILER_RT_BAREMETAL_BUILD AND NOT "${CMAKE_SYSTEM_NAME}" STREQUAL "ASTRAEAOS")
   set(GENERIC_SOURCES
     ${GENERIC_SOURCES}
     emutls.c
