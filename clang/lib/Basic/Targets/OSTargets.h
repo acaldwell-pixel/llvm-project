@@ -166,7 +166,7 @@ public:
 };
 // Astraea OS Target Info
 template <typename Target>
-class LLVM_LIBRARY_VISIBILITY LFOSTargetInfo : public OSTargetInfo<Target> {
+class LLVM_LIBRARY_VISIBILITY AstraeaOSTargetInfo : public OSTargetInfo<Target> {
 protected:
   void getOSDefines(const LangOptions &Opts, const llvm::Triple &Triple,
                     MacroBuilder &Builder) const override {
