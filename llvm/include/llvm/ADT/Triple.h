@@ -165,6 +165,7 @@ public:
     UnknownOS,
 
     Ananas,
+    AstraeaOS,
     CloudABI,
     Darwin,
     DragonFly,
