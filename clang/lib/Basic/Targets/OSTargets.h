@@ -173,9 +173,6 @@ protected:
     DefineStd(Builder, "unix", Opts);
     Builder.defineMacro("__ELF__");
     Builder.defineMacro("__Astraea_OS__");
-#    Builder.defineMacro("_REENTRANT");
-#    Builder.defineMacro("_GNU_SOURCE");
-#    Builder.defineMacro("_NEWLIB_VERSION");
   }
 
 public:
