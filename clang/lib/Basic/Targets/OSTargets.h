@@ -166,13 +166,14 @@ public:
 };
 // Astraea OS Target Info
 template <typename Target>
-class LLVM_LIBRARY_VISIBILITY AstraeaOSTargetInfo : public OSTargetInfo<Target> {
+class LLVM_LIBRARY_VISIBILITY AstraeaOSTargetInfo
+    : public OSTargetInfo<Target> {
 protected:
   void getOSDefines(const LangOptions &Opts, const llvm::Triple &Triple,
                     MacroBuilder &Builder) const override {
     DefineStd(Builder, "unix", Opts);
     Builder.defineMacro("__ELF__");
-    Builder.defineMacro("__Astraea_OS__");
+    Builder.defineMacro("__ASTRAEAOS__");
   }
 
 public:
@@ -189,8 +190,6 @@ public:
       break;
     }
   }
-  const char *getStaticInitSectionSpecifier() const override {
-    return ".text.startup";
 };
 
 // DragonFlyBSD Target
@@ -319,7 +318,7 @@ protected:
     Builder.defineMacro("__HAIKU__");
     Builder.defineMacro("__ELF__");
     DefineStd(Builder, "unix", Opts);
-    if (this->HasFloat128) 
+    if (this->HasFloat128)
       Builder.defineMacro("__FLOAT128__");
   }
 
@@ -360,6 +359,7 @@ protected:
     if (Opts.CPlusPlus)
       Builder.defineMacro("_GNU_SOURCE");
   }
+
 public:
   HurdTargetInfo(const llvm::Triple &Triple, const TargetOptions &Opts)
       : OSTargetInfo<Target>(Triple, Opts) {}
@@ -407,12 +407,12 @@ protected:
       this->PlatformMinVersion = VersionTuple(Maj, Min, Rev);
       if (Maj) {
         Builder.defineMacro("__ANDROID_MIN_SDK_VERSION__", Twine(Maj));
-        // This historical but ambiguous name for the minSdkVersion macro. Keep
-        // defined for compatibility.
+        // This historical but ambiguous name for the minSdkVersion macro.
+        // Keep defined for compatibility.
         Builder.defineMacro("__ANDROID_API__", "__ANDROID_MIN_SDK_VERSION__");
       }
     } else {
-        Builder.defineMacro("__gnu_linux__");
+      Builder.defineMacro("__gnu_linux__");
     }
     if (Opts.POSIXThreads)
       Builder.defineMacro("_REENTRANT");
@@ -583,7 +583,8 @@ public:
       : OSTargetInfo<Target>(Triple, Opts) {
     this->WCharType = TargetInfo::UnsignedShort;
 
-    // On PS4, TLS variable cannot be aligned to more than 32 bytes (256 bits).
+    // On PS4, TLS variable cannot be aligned to more than 32 bytes (256
+    // bits).
     this->MaxTLSAlign = 256;
 
     // On PS4, do not honor explicit bit field alignment,
@@ -653,8 +654,8 @@ protected:
     Builder.defineMacro("__SVR4");
     // Solaris headers require _XOPEN_SOURCE to be set to 600 for C99 and
     // newer, but to 500 for everything else.  feature_test.h has a check to
-    // ensure that you are not using C99 with an old version of X/Open or C89
-    // with a new version.
+    // ensure that you are not using C99 with an old version of X/Open or
+    // C89 with a new version.
     if (Opts.C99)
       Builder.defineMacro("_XOPEN_SOURCE", "600");
     else
@@ -693,8 +694,7 @@ public:
 };
 
 // AIX Target
-template <typename Target>
-class AIXTargetInfo : public OSTargetInfo<Target> {
+template <typename Target> class AIXTargetInfo : public OSTargetInfo<Target> {
 protected:
   void getOSDefines(const LangOptions &Opts, const llvm::Triple &Triple,
                     MacroBuilder &Builder) const override {
@@ -711,18 +711,29 @@ protected:
     Triple.getOSVersion(Major, Minor, Micro);
 
     // Define AIX OS-Version Macros.
-    // Includes logic for legacy versions of AIX; no specific intent to support.
+    // Includes logic for legacy versions of AIX; no specific intent to
+    // support.
     std::pair<int, int> OsVersion = {Major, Minor};
-    if (OsVersion >= std::make_pair(3, 2)) Builder.defineMacro("_AIX32");
-    if (OsVersion >= std::make_pair(4, 1)) Builder.defineMacro("_AIX41");
-    if (OsVersion >= std::make_pair(4, 3)) Builder.defineMacro("_AIX43");
-    if (OsVersion >= std::make_pair(5, 0)) Builder.defineMacro("_AIX50");
-    if (OsVersion >= std::make_pair(5, 1)) Builder.defineMacro("_AIX51");
-    if (OsVersion >= std::make_pair(5, 2)) Builder.defineMacro("_AIX52");
-    if (OsVersion >= std::make_pair(5, 3)) Builder.defineMacro("_AIX53");
-    if (OsVersion >= std::make_pair(6, 1)) Builder.defineMacro("_AIX61");
-    if (OsVersion >= std::make_pair(7, 1)) Builder.defineMacro("_AIX71");
-    if (OsVersion >= std::make_pair(7, 2)) Builder.defineMacro("_AIX72");
+    if (OsVersion >= std::make_pair(3, 2))
+      Builder.defineMacro("_AIX32");
+    if (OsVersion >= std::make_pair(4, 1))
+      Builder.defineMacro("_AIX41");
+    if (OsVersion >= std::make_pair(4, 3))
+      Builder.defineMacro("_AIX43");
+    if (OsVersion >= std::make_pair(5, 0))
+      Builder.defineMacro("_AIX50");
+    if (OsVersion >= std::make_pair(5, 1))
+      Builder.defineMacro("_AIX51");
+    if (OsVersion >= std::make_pair(5, 2))
+      Builder.defineMacro("_AIX52");
+    if (OsVersion >= std::make_pair(5, 3))
+      Builder.defineMacro("_AIX53");
+    if (OsVersion >= std::make_pair(6, 1))
+      Builder.defineMacro("_AIX61");
+    if (OsVersion >= std::make_pair(7, 1))
+      Builder.defineMacro("_AIX71");
+    if (OsVersion >= std::make_pair(7, 2))
+      Builder.defineMacro("_AIX72");
 
     // FIXME: Do not define _LONG_LONG when -fno-long-long is specified.
     Builder.defineMacro("_LONG_LONG");
@@ -971,7 +982,8 @@ class LLVM_LIBRARY_VISIBILITY EmscriptenTargetInfo
   }
 
 public:
-  explicit EmscriptenTargetInfo(const llvm::Triple &Triple, const TargetOptions &Opts)
+  explicit EmscriptenTargetInfo(const llvm::Triple &Triple,
+                                const TargetOptions &Opts)
       : WebAssemblyOSTargetInfo<Target>(Triple, Opts) {}
 };
 
