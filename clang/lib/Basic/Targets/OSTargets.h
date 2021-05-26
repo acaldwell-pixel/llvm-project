@@ -164,6 +164,37 @@ public:
                : TargetInfo::getLeastIntTypeByWidth(BitWidth, IsSigned);
   }
 };
+// Astraea OS Target Info
+template <typename Target>
+class LLVM_LIBRARY_VISIBILITY LFOSTargetInfo : public OSTargetInfo<Target> {
+protected:
+  void getOSDefines(const LangOptions &Opts, const llvm::Triple &Triple,
+                    MacroBuilder &Builder) const override {
+    DefineStd(Builder, "unix", Opts);
+    Builder.defineMacro("__ELF__");
+    Builder.defineMacro("__Astraea_OS__");
+#    Builder.defineMacro("_REENTRANT");
+#    Builder.defineMacro("_GNU_SOURCE");
+#    Builder.defineMacro("_NEWLIB_VERSION");
+  }
+
+public:
+  AstraeaOSTargetInfo(const llvm::Triple &Triple, const TargetOptions &Opts)
+      : OSTargetInfo<Target>(Triple, Opts) {
+    this->WIntType = TargetInfo::UnsignedInt;
+
+    switch (Triple.getArch()) {
+    default:
+      break;
+    case llvm::Triple::x86:
+    case llvm::Triple::x86_64:
+      this->HasFloat128 = true;
+      break;
+    }
+  }
+  const char *getStaticInitSectionSpecifier() const override {
+    return ".text.startup";
+};
 
 // DragonFlyBSD Target
 template <typename Target>
