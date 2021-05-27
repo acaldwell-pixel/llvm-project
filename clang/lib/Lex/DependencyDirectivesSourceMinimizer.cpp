@@ -846,8 +846,6 @@ bool Minimizer::lexPPLine(const char *&First, const char *const End) {
                   .Case("ifdef", pp_ifdef)
                   .Case("ifndef", pp_ifndef)
                   .Case("elif", pp_elif)
-                  .Case("elifdef", pp_elifdef)
-                  .Case("elifndef", pp_elifndef)
                   .Case("else", pp_else)
                   .Case("endif", pp_endif)
                   .Case("pragma", pp_pragma_import)
@@ -906,7 +904,7 @@ bool clang::minimize_source_to_dependency_directives::computeSkippedRanges(
   struct Directive {
     enum DirectiveKind {
       If,  // if/ifdef/ifndef
-      Else // elif/elifdef/elifndef, else
+      Else // elif,else
     };
     int Offset;
     DirectiveKind Kind;
@@ -921,8 +919,6 @@ bool clang::minimize_source_to_dependency_directives::computeSkippedRanges(
       break;
 
     case pp_elif:
-    case pp_elifdef:
-    case pp_elifndef:
     case pp_else: {
       if (Offsets.empty())
         return true;

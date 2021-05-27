@@ -751,8 +751,6 @@ void UnwrappedLineParser::parsePPDirective() {
   case tok::pp_else:
     parsePPElse();
     break;
-  case tok::pp_elifdef:
-  case tok::pp_elifndef:
   case tok::pp_elif:
     parsePPElIf();
     break;
