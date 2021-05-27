@@ -493,14 +493,6 @@ struct LinalgTilingOptions {
     return *this;
   }
 
-  /// Specification markers of how to distribute the `linalg.tiled_loop`.
-  SmallVector<StringRef, 2> distributionTypes = {};
-
-  LinalgTilingOptions &setDistributionTypes(ArrayRef<StringRef> types) {
-    distributionTypes.assign(types.begin(), types.end());
-    return *this;
-  }
-
   /// Computation function that returns a padding value to use when padding to
   /// force static sizes. When `paddingValueComputationFunction` is set, padding
   /// operations are introduced, that guarantee the underlying op is statically
@@ -859,13 +851,6 @@ void populateLinalgNamedOpsGeneralizationPatterns(
 void populateLinalgConvGeneralizationPatterns(
     RewritePatternSet &patterns,
     LinalgTransformationFilter filter = LinalgTransformationFilter());
-
-/// Linalg distribution patterns
-//
-/// Populates `patterns` with patterns to distribute linalg.tiled_loop.
-void populateLinalgDistributeTiledLoopPattern(
-    RewritePatternSet &patterns, const LinalgLoopDistributionOptions &opts,
-    const LinalgTransformationFilter &marker);
 
 //===----------------------------------------------------------------------===//
 // Op-specific patterns.

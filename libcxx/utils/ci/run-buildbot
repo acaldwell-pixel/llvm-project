@@ -270,13 +270,6 @@ generic-gcc)
     generate-cmake
     check-cxx-cxxabi
 ;;
-generic-gcc-next)
-    export CC=gcc-11
-    export CXX=g++-11
-    clean
-    generate-cmake
-    check-cxx-cxxabi
-;;
 generic-asan)
     export CC=clang
     export CXX=clang++

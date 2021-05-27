@@ -1472,12 +1472,7 @@ public:
   /// like i140, which are first promoted then expanded, it is the number of
   /// registers needed to hold all the bits of the original type.  For an i140
   /// on a 32 bit machine this means 5 registers.
-  ///
-  /// RegisterVT may be passed as a way to override the default settings, for
-  /// instance with i128 inline assembly operands on SystemZ.
-  virtual unsigned
-  getNumRegisters(LLVMContext &Context, EVT VT,
-                  Optional<MVT> RegisterVT = None) const {
+  unsigned getNumRegisters(LLVMContext &Context, EVT VT) const {
     if (VT.isSimple()) {
       assert((unsigned)VT.getSimpleVT().SimpleTy <
                 array_lengthof(NumRegistersForVT));

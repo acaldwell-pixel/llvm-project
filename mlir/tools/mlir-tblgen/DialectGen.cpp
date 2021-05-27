@@ -107,13 +107,6 @@ static const char *const typeParserDecl = R"(
                  ::mlir::DialectAsmPrinter &os) const override;
 )";
 
-/// The code block for the canonicalization pattern registration hook.
-static const char *const canonicalizerDecl = R"(
-  /// Register canonicalization patterns.
-  void getCanonicalizationPatterns(
-      ::mlir::RewritePatternSet &results) const override;
-)";
-
 /// The code block for the constant materializer hook.
 static const char *const constantMaterializerDecl = R"(
   /// Materialize a single constant operation from a given attribute value with
@@ -187,8 +180,6 @@ static void emitDialectDecl(Dialect &dialect,
     os << typeParserDecl;
 
   // Add the decls for the various features of the dialect.
-  if (dialect.hasCanonicalizer())
-    os << canonicalizerDecl;
   if (dialect.hasConstantMaterializer())
     os << constantMaterializerDecl;
   if (dialect.hasOperationAttrVerify())

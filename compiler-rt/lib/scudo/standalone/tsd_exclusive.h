@@ -25,35 +25,31 @@ struct ThreadState {
 template <class Allocator> void teardownThread(void *Ptr);
 
 template <class Allocator> struct TSDRegistryExT {
-  void init(Allocator *Instance) {
-    DCHECK(!Initialized);
-    Instance->init();
+  void initLinkerInitialized(Allocator *Instance) {
+    Instance->initLinkerInitialized();
     CHECK_EQ(pthread_key_create(&PThreadKey, teardownThread<Allocator>), 0);
-    FallbackTSD.init(Instance);
+    FallbackTSD.initLinkerInitialized(Instance);
     Initialized = true;
+  }
+  void init(Allocator *Instance) {
+    memset(this, 0, sizeof(*this));
+    initLinkerInitialized(Instance);
   }
 
   void initOnceMaybe(Allocator *Instance) {
     ScopedLock L(Mutex);
     if (LIKELY(Initialized))
       return;
-    init(Instance); // Sets Initialized.
+    initLinkerInitialized(Instance); // Sets Initialized.
   }
 
-  void unmapTestOnly(Allocator *Instance) {
-    DCHECK(Instance);
-    if (reinterpret_cast<Allocator *>(pthread_getspecific(PThreadKey))) {
-      DCHECK_EQ(reinterpret_cast<Allocator *>(pthread_getspecific(PThreadKey)),
-                Instance);
-      ThreadTSD.commitBack(Instance);
-      ThreadTSD = {};
-    }
-    CHECK_EQ(pthread_key_delete(PThreadKey), 0);
-    PThreadKey = {};
-    FallbackTSD.commitBack(Instance);
-    FallbackTSD = {};
+  void unmapTestOnly() {
+    Allocator *Instance =
+        reinterpret_cast<Allocator *>(pthread_getspecific(PThreadKey));
+    if (!Instance)
+      return;
+    ThreadTSD.commitBack(Instance);
     State = {};
-    Initialized = false;
   }
 
   ALWAYS_INLINE void initThreadMaybe(Allocator *Instance, bool MinimalInit) {
@@ -107,7 +103,7 @@ private:
       return;
     CHECK_EQ(
         pthread_setspecific(PThreadKey, reinterpret_cast<void *>(Instance)), 0);
-    ThreadTSD.init(Instance);
+    ThreadTSD.initLinkerInitialized(Instance);
     State.InitState = ThreadState::Initialized;
     Instance->callPostInitCallback();
   }

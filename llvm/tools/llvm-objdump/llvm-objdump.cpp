@@ -1764,11 +1764,9 @@ void objdump::printSectionHeaders(const ObjectFile *Obj) {
 
     std::string Type = Section.isText() ? "TEXT" : "";
     if (Section.isData())
-      Type += Type.empty() ? "DATA" : ", DATA";
+      Type += Type.empty() ? "DATA" : " DATA";
     if (Section.isBSS())
-      Type += Type.empty() ? "BSS" : ", BSS";
-    if (Section.isDebugSection())
-      Type += Type.empty() ? "DEBUG" : ", DEBUG";
+      Type += Type.empty() ? "BSS" : " BSS";
 
     if (HasLMAColumn)
       outs() << format("%3" PRIu64 " %-*s %08" PRIx64 " ", Idx, NameWidth,

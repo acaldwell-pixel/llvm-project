@@ -275,9 +275,6 @@ class Dialect {
 
   // If this dialect overrides the hook for op interface fallback.
   bit hasOperationInterfaceFallback = 0;
-
-  // If this dialect overrides the hook for canonicalization patterns.
-  bit hasCanonicalizer = 0;
 }
 
 //===----------------------------------------------------------------------===//

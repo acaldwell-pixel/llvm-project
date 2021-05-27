@@ -6927,12 +6927,6 @@ const SCEV *ScalarEvolution::createSCEV(Value *V) {
 //                   Iteration Count Computation Code
 //
 
-const SCEV *ScalarEvolution::getTripCountFromExitCount(const SCEV *ExitCount) {
-  // Get the trip count from the BE count by adding 1.  Overflow, results
-  // in zero which means "unknown".
-  return getAddExpr(ExitCount, getOne(ExitCount->getType()));
-}
-
 static unsigned getConstantTripCount(const SCEVConstant *ExitCount) {
   if (!ExitCount)
     return 0;
@@ -6948,8 +6942,11 @@ static unsigned getConstantTripCount(const SCEVConstant *ExitCount) {
 }
 
 unsigned ScalarEvolution::getSmallConstantTripCount(const Loop *L) {
-  auto *ExitCount = dyn_cast<SCEVConstant>(getBackedgeTakenCount(L, Exact));
-  return getConstantTripCount(ExitCount);
+  if (BasicBlock *ExitingBB = L->getExitingBlock())
+    return getSmallConstantTripCount(L, ExitingBB);
+
+  // No trip count information for multiple exits.
+  return 0;
 }
 
 unsigned
@@ -6970,45 +6967,11 @@ unsigned ScalarEvolution::getSmallConstantMaxTripCount(const Loop *L) {
 }
 
 unsigned ScalarEvolution::getSmallConstantTripMultiple(const Loop *L) {
-  SmallVector<BasicBlock *, 8> ExitingBlocks;
-  L->getExitingBlocks(ExitingBlocks);
+  if (BasicBlock *ExitingBB = L->getExitingBlock())
+    return getSmallConstantTripMultiple(L, ExitingBB);
 
-  Optional<unsigned> Res = None;
-  for (auto *ExitingBB : ExitingBlocks) {
-    unsigned Multiple = getSmallConstantTripMultiple(L, ExitingBB);
-    if (!Res)
-      Res = Multiple;
-    Res = (unsigned)GreatestCommonDivisor64(*Res, Multiple);
-  }
-  return Res.getValueOr(1);
-}
-
-unsigned ScalarEvolution::getSmallConstantTripMultiple(const Loop *L,
-                                                       const SCEV *ExitCount) {
-  if (ExitCount == getCouldNotCompute())
-    return 1;
-
-  // Get the trip count
-  const SCEV *TCExpr = getTripCountFromExitCount(ExitCount);
-
-  const SCEVConstant *TC = dyn_cast<SCEVConstant>(TCExpr);
-  if (!TC)
-    // Attempt to factor more general cases. Returns the greatest power of
-    // two divisor. If overflow happens, the trip count expression is still
-    // divisible by the greatest power of 2 divisor returned.
-    return 1U << std::min((uint32_t)31,
-                          GetMinTrailingZeros(applyLoopGuards(TCExpr, L)));
-
-  ConstantInt *Result = TC->getValue();
-
-  // Guard against huge trip counts (this requires checking
-  // for zero to handle the case where the trip count == -1 and the
-  // addition wraps).
-  if (!Result || Result->getValue().getActiveBits() > 32 ||
-      Result->getValue().getActiveBits() == 0)
-    return 1;
-
-  return (unsigned)Result->getZExtValue();
+  // No trip multiple information for multiple exits.
+  return 0;
 }
 
 /// Returns the largest constant divisor of the trip count of this loop as a
@@ -7030,7 +6993,30 @@ ScalarEvolution::getSmallConstantTripMultiple(const Loop *L,
   assert(L->isLoopExiting(ExitingBlock) &&
          "Exiting block must actually branch out of the loop!");
   const SCEV *ExitCount = getExitCount(L, ExitingBlock);
-  return getSmallConstantTripMultiple(L, ExitCount);
+  if (ExitCount == getCouldNotCompute())
+    return 1;
+
+  // Get the trip count from the BE count by adding 1.
+  const SCEV *TCExpr = getAddExpr(ExitCount, getOne(ExitCount->getType()));
+
+  const SCEVConstant *TC = dyn_cast<SCEVConstant>(TCExpr);
+  if (!TC)
+    // Attempt to factor more general cases. Returns the greatest power of
+    // two divisor. If overflow happens, the trip count expression is still
+    // divisible by the greatest power of 2 divisor returned.
+    return 1U << std::min((uint32_t)31,
+                          GetMinTrailingZeros(applyLoopGuards(TCExpr, L)));
+
+  ConstantInt *Result = TC->getValue();
+
+  // Guard against huge trip counts (this requires checking
+  // for zero to handle the case where the trip count == -1 and the
+  // addition wraps).
+  if (!Result || Result->getValue().getActiveBits() > 32 ||
+      Result->getValue().getActiveBits() == 0)
+    return 1;
+
+  return (unsigned)Result->getZExtValue();
 }
 
 const SCEV *ScalarEvolution::getExitCount(const Loop *L,

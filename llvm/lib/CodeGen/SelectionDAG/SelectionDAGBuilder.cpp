@@ -988,9 +988,8 @@ void RegsForValue::AddInlineAsmOperands(unsigned Code, bool HasMatching,
   }
 
   for (unsigned Value = 0, Reg = 0, e = ValueVTs.size(); Value != e; ++Value) {
+    unsigned NumRegs = TLI.getNumRegisters(*DAG.getContext(), ValueVTs[Value]);
     MVT RegisterVT = RegVTs[Value];
-    unsigned NumRegs = TLI.getNumRegisters(*DAG.getContext(), ValueVTs[Value],
-                                           RegisterVT);
     for (unsigned i = 0; i != NumRegs; ++i) {
       assert(Reg < Regs.size() && "Mismatch in # registers expected");
       unsigned TheReg = Regs[Reg++];
@@ -8242,7 +8241,7 @@ static void GetRegistersForValue(SelectionDAG &DAG, const SDLoc &DL,
   // remember that AX is actually i16 to get the right extension.
   const MVT RegVT = *TRI.legalclasstypes_begin(*RC);
 
-  if (OpInfo.ConstraintVT != MVT::Other && RegVT != MVT::Untyped) {
+  if (OpInfo.ConstraintVT != MVT::Other) {
     // If this is an FP operand in an integer register (or visa versa), or more
     // generally if the operand value disagrees with the register class we plan
     // to stick it in, fix the operand type.
@@ -8289,7 +8288,7 @@ static void GetRegistersForValue(SelectionDAG &DAG, const SDLoc &DL,
   // Initialize NumRegs.
   unsigned NumRegs = 1;
   if (OpInfo.ConstraintVT != MVT::Other)
-    NumRegs = TLI.getNumRegisters(Context, OpInfo.ConstraintVT, RegVT);
+    NumRegs = TLI.getNumRegisters(Context, OpInfo.ConstraintVT);
 
   // If this is a constraint for a specific physical register, like {r17},
   // assign it now.
@@ -8622,18 +8621,21 @@ void SelectionDAGBuilder::visitInlineAsm(const CallBase &Call,
             return;
           }
 
+          MVT RegVT = AsmNodeOperands[CurOp+1].getSimpleValueType();
           SmallVector<unsigned, 4> Regs;
-          MachineFunction &MF = DAG.getMachineFunction();
-          MachineRegisterInfo &MRI = MF.getRegInfo();
-          const TargetRegisterInfo &TRI = *MF.getSubtarget().getRegisterInfo();
-          RegisterSDNode *R = dyn_cast<RegisterSDNode>(AsmNodeOperands[CurOp+1]);
-          Register TiedReg = R->getReg();
-          MVT RegVT = R->getSimpleValueType(0);
-          const TargetRegisterClass *RC = TiedReg.isVirtual() ?
-            MRI.getRegClass(TiedReg) : TRI.getMinimalPhysRegClass(TiedReg);
-          unsigned NumRegs = InlineAsm::getNumOperandRegisters(OpFlag);
-          for (unsigned i = 0; i != NumRegs; ++i)
-            Regs.push_back(MRI.createVirtualRegister(RC));
+
+          if (const TargetRegisterClass *RC = TLI.getRegClassFor(RegVT)) {
+            unsigned NumRegs = InlineAsm::getNumOperandRegisters(OpFlag);
+            MachineRegisterInfo &RegInfo =
+                DAG.getMachineFunction().getRegInfo();
+            for (unsigned i = 0; i != NumRegs; ++i)
+              Regs.push_back(RegInfo.createVirtualRegister(RC));
+          } else {
+            emitInlineAsmError(Call,
+                               "inline asm error: This value type register "
+                               "class is not natively supported!");
+            return;
+          }
 
           RegsForValue MatchedRegs(Regs, RegVT, InOperandVal.getValueType());
 

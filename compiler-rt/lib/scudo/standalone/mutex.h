@@ -22,6 +22,7 @@ namespace scudo {
 
 class HybridMutex {
 public:
+  void init() { M = {}; }
   bool tryLock();
   NOINLINE void lock() {
     if (LIKELY(tryLock()))

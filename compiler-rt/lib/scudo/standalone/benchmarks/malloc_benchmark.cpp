@@ -29,6 +29,7 @@ template <typename Config> static void BM_malloc_free(benchmark::State &State) {
   std::unique_ptr<AllocatorT, decltype(Deleter)> Allocator(new AllocatorT,
                                                            Deleter);
   CurrentAllocator = Allocator.get();
+  Allocator->reset();
 
   const size_t NBytes = State.range(0);
   size_t PageSize = scudo::getPageSizeCached();
@@ -69,6 +70,7 @@ static void BM_malloc_free_loop(benchmark::State &State) {
   std::unique_ptr<AllocatorT, decltype(Deleter)> Allocator(new AllocatorT,
                                                            Deleter);
   CurrentAllocator = Allocator.get();
+  Allocator->reset();
 
   const size_t NumIters = State.range(0);
   size_t PageSize = scudo::getPageSizeCached();

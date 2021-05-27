@@ -40,16 +40,18 @@ extern "C" {
  * @param[in] var_size Pointer to a non-NULL @p uint variable that will
  * hold the size of the global symbol object.
  *
- * @retval ::HSA_STATUS_SUCCESS The function has executed successfully.
+ * @retval ::ATMI_STATUS_SUCCESS The function has executed successfully.
  *
- * @retval ::HSA_STATUS_ERROR If @p symbol, @p var_addr or @p var_size are
+ * @retval ::ATMI_STATUS_ERROR If @p symbol, @p var_addr or @p var_size are
  * invalid
  * location in the current node, or if ATMI is not initialized.
+ *
+ * @retval ::ATMI_STATUS_UNKNOWN The function encountered errors.
  */
-hsa_status_t atmi_interop_hsa_get_symbol_info(
+atmi_status_t atmi_interop_hsa_get_symbol_info(
     const std::map<std::string, atl_symbol_info_t> &SymbolInfoTable,
-    int DeviceId, const char *symbol, void **var_addr, unsigned int *var_size);
-
+    atmi_mem_place_t place, const char *symbol, void **var_addr,
+    unsigned int *var_size);
 /**
  * @brief Get the HSA-specific kernel info from a kernel name
  *
@@ -67,16 +69,18 @@ hsa_status_t atmi_interop_hsa_get_symbol_info(
  * @param[in] value Pointer to a non-NULL @p uint variable that will
  * hold the return value of the kernel property.
  *
- * @retval ::HSA_STATUS_SUCCESS The function has executed successfully.
+ * @retval ::ATMI_STATUS_SUCCESS The function has executed successfully.
  *
- * @retval ::HSA_STATUS_ERROR If @p symbol, @p var_addr or @p var_size are
+ * @retval ::ATMI_STATUS_ERROR If @p symbol, @p var_addr or @p var_size are
  * invalid
  * location in the current node, or if ATMI is not initialized.
+ *
+ * @retval ::ATMI_STATUS_UNKNOWN The function encountered errors.
  */
-hsa_status_t atmi_interop_hsa_get_kernel_info(
+atmi_status_t atmi_interop_hsa_get_kernel_info(
     const std::map<std::string, atl_kernel_info_t> &KernelInfoTable,
-    int DeviceId, const char *kernel_name, hsa_executable_symbol_info_t info,
-    uint32_t *value);
+    atmi_mem_place_t place, const char *kernel_name,
+    hsa_executable_symbol_info_t info, uint32_t *value);
 
 /** @} */
 

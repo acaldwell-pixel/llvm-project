@@ -64,7 +64,11 @@ static_assert(sizeof(QuarantineBatch) <= (1U << 13), ""); // 8Kb.
 // Per-thread cache of memory blocks.
 template <typename Callback> class QuarantineCache {
 public:
-  void init() { DCHECK_EQ(atomic_load_relaxed(&Size), 0U); }
+  void initLinkerInitialized() {}
+  void init() {
+    memset(this, 0, sizeof(*this));
+    initLinkerInitialized();
+  }
 
   // Total memory used, including internal accounting.
   uptr getSize() const { return atomic_load_relaxed(&Size); }
@@ -171,10 +175,7 @@ template <typename Callback, typename Node> class GlobalQuarantine {
 public:
   typedef QuarantineCache<Callback> CacheT;
 
-  void init(uptr Size, uptr CacheSize) {
-    DCHECK_EQ(atomic_load_relaxed(&MaxSize), 0U);
-    DCHECK_EQ(atomic_load_relaxed(&MinSize), 0U);
-    DCHECK_EQ(atomic_load_relaxed(&MaxCacheSize), 0U);
+  void initLinkerInitialized(uptr Size, uptr CacheSize) {
     // Thread local quarantine size can be zero only when global quarantine size
     // is zero (it allows us to perform just one atomic read per put() call).
     CHECK((Size == 0 && CacheSize == 0) || CacheSize != 0);
@@ -183,7 +184,16 @@ public:
     atomic_store_relaxed(&MinSize, Size / 10 * 9); // 90% of max size.
     atomic_store_relaxed(&MaxCacheSize, CacheSize);
 
+    Cache.initLinkerInitialized();
+  }
+  void init(uptr Size, uptr CacheSize) {
+    CacheMutex.init();
     Cache.init();
+    RecycleMutex.init();
+    MinSize = {};
+    MaxSize = {};
+    MaxCacheSize = {};
+    initLinkerInitialized(Size, CacheSize);
   }
 
   uptr getMaxSize() const { return atomic_load_relaxed(&MaxSize); }

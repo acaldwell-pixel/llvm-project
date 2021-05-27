@@ -198,8 +198,7 @@ void GenerateLoopNest<scf::ForOp>::doit(
     function_ref<scf::ValueVector(OpBuilder &, Location, ValueRange,
                                   ValueRange)>
         bodyBuilderFn,
-    Optional<LinalgLoopDistributionOptions> distributionOptions,
-    ArrayRef<StringRef> distributionTypes) {
+    Optional<LinalgLoopDistributionOptions> distributionOptions) {
   auto iterArgInitValues = linalgOp.getOutputTensors();
   // Create procInfo so it dominates loops, if appropriate.
   SmallVector<ProcInfo, 4> procInfo;
@@ -247,7 +246,7 @@ void GenerateLoopNest<AffineForOp>::doit(
     function_ref<scf::ValueVector(OpBuilder &, Location, ValueRange,
                                   ValueRange)>
         bodyBuilderFn,
-    Optional<LinalgLoopDistributionOptions>, ArrayRef<StringRef>) {
+    Optional<LinalgLoopDistributionOptions>) {
   auto iterArgInitValues = linalgOp.getOutputTensors();
   assert(iterArgInitValues.empty() && "unexpected AffineForOp init values");
   SmallVector<Value, 4> lbs, ubs, steps;
@@ -276,8 +275,7 @@ void GenerateLoopNest<TiledLoopOp>::doit(
     function_ref<scf::ValueVector(OpBuilder &, Location, ValueRange,
                                   ValueRange)>
         bodyBuilderFn,
-    Optional<LinalgLoopDistributionOptions> distributionOptions,
-    ArrayRef<StringRef> distributionTypes) {
+    Optional<LinalgLoopDistributionOptions>) {
   SmallVector<ProcInfo, 2> procInfo;
   SmallVector<Value, 4> lbs, ubs, steps;
   unpackRanges(loopRanges, lbs, ubs, steps);
@@ -293,8 +291,6 @@ void GenerateLoopNest<TiledLoopOp>::doit(
   auto tiledLoop = b.create<TiledLoopOp>(
       loc, lbs, ubs, steps, linalgOp.getInputs(), linalgOp.getOutputs(),
       b.getArrayAttr(iteratorTypes), wrappedBuilderFn);
-  if (!distributionTypes.empty())
-    tiledLoop.setDistributionTypes(b, distributionTypes);
 
   // Replace inputs/outputs with the corresponding region args.
   auto isInsideTiledLoop = [&](OpOperand &operand) {
@@ -450,8 +446,7 @@ void GenerateLoopNest<scf::ParallelOp>::doit(
     function_ref<scf::ValueVector(OpBuilder &, Location, ValueRange,
                                   ValueRange)>
         bodyBuilderFn,
-    Optional<LinalgLoopDistributionOptions> distributionOptions,
-    ArrayRef<StringRef> distributionTypes) {
+    Optional<LinalgLoopDistributionOptions> distributionOptions) {
   auto iterArgInitValues = linalgOp.getOutputTensors();
   assert(iterArgInitValues.empty() && "unexpected ParallelOp init values");
   // This function may be passed more iterator types than ranges.
