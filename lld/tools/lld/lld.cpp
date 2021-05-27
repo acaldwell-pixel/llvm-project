@@ -52,6 +52,7 @@ enum Flavor {
   Darwin,    // -flavor darwin
   DarwinOld, // -flavor darwinold
   Wasm,      // -flavor wasm
+  AstraeaOS, // -flavor astraeaos
 };
 
 LLVM_ATTRIBUTE_NORETURN static void die(const Twine &s) {
@@ -67,6 +68,7 @@ static Flavor getFlavor(StringRef s) {
       .CasesLower("ld64", "ld64.lld", "darwin", "darwinnew",
                   "ld64.lld.darwinnew", Darwin)
       .CasesLower("darwinold", "ld64.lld.darwinold", DarwinOld)
+      .CaseLower("astraeaos", "ld-astraeaos", AstraeaOS)
       .Default(Invalid);
 }
 
@@ -154,10 +156,12 @@ static int lldMain(int argc, const char **argv, llvm::raw_ostream &stdoutOS,
     return !mach_o::link(args, exitEarly, stdoutOS, stderrOS);
   case Wasm:
     return !lld::wasm::link(args, exitEarly, stdoutOS, stderrOS);
+  case AstraeaOS:
+    return !lld::wasm::link(args, exitEarly, stdoutOS, stderrOS);
   default:
     die("lld is a generic driver.\n"
         "Invoke ld.lld (Unix), ld64.lld (macOS), lld-link (Windows), wasm-ld"
-        " (WebAssembly) instead");
+        " (WebAssembly), astraeaos-ld (AstraeaOS) instead");
   }
 }
 

@@ -15,60 +15,90 @@
 namespace clang {
 namespace driver {
 namespace tools {
-namespace AstraeaOS {
-class LLVM_LIBRARY_VISIBILITY Linker : public Tool {
+namespace astraeaos {
+class LLVM_LIBRARY_VISIBILITY Assembler : public Tool {
 public:
-  Linker(const ToolChain &TC) : Tool("astraeaos::Linker", "ld.lld", TC) {}
+  Assembler(const ToolChain &TC)
+      : Tool("astraeaos::Assembler", "assembler", TC) {}
 
-  bool hasIntegratedCPP() const override;
-  bool isLinkJob() const override;
-  bool isMathErrnoDefault() const override;
-  bool useRelaxRelocations() const override;
-  RuntimeLibType GetDefaultRuntimeLibType() const override {
-    return ToolChain::RLT_CompilerRT;
-  }
+  bool hasIntegratedCPP() const override { return false; }
 
   void ConstructJob(Compilation &C, const JobAction &JA,
                     const InputInfo &Output, const InputInfoList &Inputs,
                     const llvm::opt::ArgList &TCArgs,
                     const char *LinkingOutput) const override;
-}
-} // namespace AstraeaOS
+};
+class LLVM_LIBRARY_VISIBILITY Linker : public Tool {
+public:
+  Linker(const ToolChain &TC) : Tool("astraeaos::Linker", "linker", TC) {}
+
+  bool hasIntegratedCPP() const override { return false; }
+  bool isLinkJob() const override { return true; }
+
+  void ConstructJob(Compilation &C, const JobAction &JA,
+                    const InputInfo &Output, const InputInfoList &Inputs,
+                    const llvm::opt::ArgList &TCArgs,
+                    const char *LinkingOutput) const override;
+};
+} // end namespace astraeaos
 } // namespace tools
-} // namespace driver
-} // namespace clang
 
 namespace toolchains {
-class LLVM_LIBRARY_VISIBILITY AstraeaOS : public ToolChain {
+class LLVM_LIBRARY_VISIBILITY AstraeaOS : public Generic_ELF {
 public:
   AstraeaOS(const Driver &D, const llvm::Triple &Triple,
             const llvm::opt::ArgList &Args);
 
   bool HasNativeLLVMSupport() const override;
-  bool IsIntegratedAssemblerDefault() const override;
+
+  std::string getMultiarchTriple(const Driver &D,
+                                 const llvm::Triple &TargetTriple,
+                                 StringRef SysRoot) const override;
 
   void
   AddClangSystemIncludeArgs(const llvm::opt::ArgList &DriverArgs,
                             llvm::opt::ArgStringList &CC1Args) const override;
-
   void
   addLibStdCxxIncludePaths(const llvm::opt::ArgList &DriverArgs,
                            llvm::opt::ArgStringList &CC1Args) const override;
+  void AddCudaIncludeArgs(const llvm::opt::ArgList &DriverArgs,
+                          llvm::opt::ArgStringList &CC1Args) const override;
+  void AddHIPIncludeArgs(const llvm::opt::ArgList &DriverArgs,
+                         llvm::opt::ArgStringList &CC1Args) const override;
+  void AddIAMCUIncludeArgs(const llvm::opt::ArgList &DriverArgs,
+                           llvm::opt::ArgStringList &CC1Args) const override;
+  RuntimeLibType GetDefaultRuntimeLibType() const override;
+  CXXStdlibType GetDefaultCXXStdlibType() const override;
+  bool
+  IsAArch64OutlineAtomicsDefault(const llvm::opt::ArgList &Args) const override;
+  bool isPIEDefault() const override;
+  bool isNoExecStackDefault() const override;
+  bool IsMathErrnoDefault() const override;
+  SanitizerMask getSupportedSanitizers() const override;
+  void addProfileRTLibs(const llvm::opt::ArgList &Args,
+                        llvm::opt::ArgStringList &CmdArgs) const override;
+  std::string computeSysRoot() const override;
 
-  RuntimeLibType
-  GetRuntimeLibType(const llvm::opt::ArgList &Args) const override;
-  UnwindLibType GetUnwindLibType(const llvm::opt::ArgList &Args) const override;
+  std::string getDynamicLinker(const llvm::opt::ArgList &Args) const override;
 
-  void
-  addClangTargetOptions(const llvm::opt::ArgList &DriverArgs,
-                        llvm::opt::ArgStringList &CC1Args,
-                        Action::OffloadKind DeviceOffloadKind) const override;
+  void addExtraOpts(llvm::opt::ArgStringList &CmdArgs) const override;
 
-  const char *getDefaultLinker() const override{return "ld.lld"};
+  std::vector<std::string> ExtraOpts;
+
+  llvm::DenormalMode getDefaultDenormalModeForType(
+      const llvm::opt::ArgList &DriverArgs, const JobAction &JA,
+      const llvm::fltSemantics *FPType = nullptr) const override;
 
 protected:
   Tool *buildAssembler() const override;
-  Tool *builderLinker() const override;
-}
+  Tool *buildLinker() const override;
+  Tool *buildStaticLibTool() const override;
+  std::string getMultiarchTriple(const Driver &D,
+                                 const llvm::Triple &TargetTriple,
+                                 StringRef SysRoot) const override;
+};
 } // namespace toolchains
+} // namespace driver
+} // namespace clang
+
 #endif // LLVM_CLANG_LIB_DRIVER_TOOLCHAINS_ASTRAEAOS_H

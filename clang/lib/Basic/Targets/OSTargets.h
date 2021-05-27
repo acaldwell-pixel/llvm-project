@@ -166,29 +166,37 @@ public:
 };
 // Astraea OS Target Info
 template <typename Target>
-class LLVM_LIBRARY_VISIBILITY AstraeaOSTargetInfo
-    : public OSTargetInfo<Target> {
+class LLVM_LIBRARY_VISIBILITY AstraeaOSTargetInfo : public OSTargetInfo<Target> {
 protected:
   void getOSDefines(const LangOptions &Opts, const llvm::Triple &Triple,
                     MacroBuilder &Builder) const override {
-    DefineStd(Builder, "unix", Opts);
-    Builder.defineMacro("__ELF__");
-    Builder.defineMacro("__ASTRAEAOS__");
+    Builder.defineMacro("_ASTRAEAOS");
   }
 
 public:
-  AstraeaOSTargetInfo(const llvm::Triple &Triple, const TargetOptions &Opts)
-      : OSTargetInfo<Target>(Triple, Opts) {
+  AstraeaOSTargetInfo(const llvm::Triple &Triple) : OSTargetInfo<Target>(Triple) {
     this->WIntType = TargetInfo::UnsignedInt;
-
     switch (Triple.getArch()) {
     default:
       break;
+    /*case llvm::Triple::mips:
+    case llvm::Triple::mipsel:
+    case llvm::Triple::mips64:
+    case llvm::Triple::mips64el:
+    case llvm::Triple::ppc:
+    case llvm::Triple::ppcle:
+    case llvm::Triple::ppc64:
+    case llvm::Triple::ppc64le:
+    this->MCountName = "_mcount";
+      break;*/
     case llvm::Triple::x86:
     case llvm::Triple::x86_64:
       this->HasFloat128 = true;
       break;
     }
+  }
+  const char *getStaticInitSectionSpecifier() const override {
+    return ".text.startup";
   }
 };
 

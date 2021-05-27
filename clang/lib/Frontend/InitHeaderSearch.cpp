@@ -230,6 +230,7 @@ void InitHeaderSearch::AddDefaultCIncludePaths(const llvm::Triple &triple,
     case llvm::Triple::ELFIAMCU:
     case llvm::Triple::Fuchsia:
     case llvm::Triple::AstraeaOS:
+//      AddPath("/usr/local/include", System, false);
       break;
     case llvm::Triple::Win32:
       if (triple.getEnvironment() != llvm::Triple::Cygnus)

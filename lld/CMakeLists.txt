@@ -209,5 +209,6 @@ add_subdirectory(ELF)
 add_subdirectory(MachO)
 add_subdirectory(MinGW)
 add_subdirectory(wasm)
+add_subdirectory(AstraeaOS)
 
 add_subdirectory(cmake/modules)

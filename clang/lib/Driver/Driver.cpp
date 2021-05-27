@@ -13,7 +13,7 @@
 #include "ToolChains/AMDGPUOpenMP.h"
 #include "ToolChains/AVR.h"
 #include "ToolChains/Ananas.h"
-#include "ToolChains/AstraeaOS.h
+#include "ToolChains/AstraeaOS.h"
 #include "ToolChains/BareMetal.h"
 #include "ToolChains/Clang.h"
 #include "ToolChains/CloudABI.h"

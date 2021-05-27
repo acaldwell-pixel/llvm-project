@@ -7,71 +7,141 @@
 //===----------------------------------------------------------------------===//
 
 #include "AstraeaOS.h"
+#include "CommonArgs.h"
+#include "InputInfo.h"
+#include "clang/Driver/Compilation.h"
+#include "clang/Driver/Driver.h"
+#include "clang/Driver/Options.h"
+#include "llvm/ADT/SmallString.h"
+#include "llvm/Option/ArgList.h"
+#include "llvm/Support/Path.h"
 
 using namespace clang::driver;
-using namespace clang::driver::toolchains;
 using namespace clang::driver::tools;
+using namespace clang::driver::toolchains;
 using namespace clang;
 using namespace llvm::opt;
 
-using tools : AddMultilibPaths;
+void astraeaos::Assembler::ConstructJob(Compilation &C, const JobAction &JA,
+                                        const InputInfo &Output,
+                                        const InputInfoList &Inputs,
+                                        const ArgList &Args,
+                                        const char *LinkingOutput) const {
+  claimNoWarnArgs(Args);
+  ArgStringList CmdArgs;
+
+  Args.AddAllArgValues(CmdArgs, options::OPT_Wa_COMMA, options::OPT_Xassembler);
+
+  CmdArgs.push_back("-o");
+  CmdArgs.push_back(Output.getFilename());
+
+  for (const auto &II : Inputs)
+    CmdArgs.push_back(II.getFilename());
+
+  const char *Exec = Args.MakeArgString(getToolChain().GetProgramPath("as"));
+  C.addCommand(std::make_unique<Command>(JA, *this,
+                                         ResponseFileSupport::AtFileCurCP(),
+                                         Exec, CmdArgs, Inputs, Output));
+}
+
+void astraeaos::Linker::ConstructJob(Compilation &C, const JobAction &JA,
+                                     const InputInfo &Output,
+                                     const InputInfoList &Inputs,
+                                     const ArgList &Args,
+                                     const char *LinkingOutput) const {
+  const ToolChain &ToolChain = getToolChain();
+  const Driver &D = ToolChain.getDriver();
+  ArgStringList CmdArgs;
+
+  // Silence warning for "clang -g foo.o -o foo"
+  Args.ClaimAllArgs(options::OPT_g_Group);
+  // and "clang -emit-llvm foo.o -o foo"
+  Args.ClaimAllArgs(options::OPT_emit_llvm);
+  // and for "clang -w foo.o -o foo". Other warning options are already
+  // handled somewhere else.
+  Args.ClaimAllArgs(options::OPT_w);
+
+  if (!D.SysRoot.empty())
+    CmdArgs.push_back(Args.MakeArgString("--sysroot=" + D.SysRoot));
+
+  if (Args.hasArg(options::OPT_static)) {
+    CmdArgs.push_back("-Bstatic");
+  } else {
+    if (Args.hasArg(options::OPT_rdynamic))
+      CmdArgs.push_back("-export-dynamic");
+    if (Args.hasArg(options::OPT_shared)) {
+      CmdArgs.push_back("-Bshareable");
+    } else {
+      Args.AddAllArgs(CmdArgs, options::OPT_pie);
+      CmdArgs.push_back("-dynamic-linker");
+      CmdArgs.push_back("/lib/ld-astraeaos.so");
+    }
+  }
+
+  if (Output.isFilename()) {
+    CmdArgs.push_back("-o");
+    CmdArgs.push_back(Output.getFilename());
+  } else {
+    assert(Output.isNothing() && "Invalid output.");
+  }
+
+  if (!Args.hasArg(options::OPT_nostdlib, options::OPT_nostartfiles)) {
+    if (!Args.hasArg(options::OPT_shared)) {
+      CmdArgs.push_back(Args.MakeArgString(ToolChain.GetFilePath("crt0.o")));
+    }
+    CmdArgs.push_back(Args.MakeArgString(ToolChain.GetFilePath("crti.o")));
+    if (Args.hasArg(options::OPT_shared) || Args.hasArg(options::OPT_pie)) {
+      CmdArgs.push_back(
+          Args.MakeArgString(ToolChain.GetFilePath("crtbeginS.o")));
+    } else {
+      CmdArgs.push_back(
+          Args.MakeArgString(ToolChain.GetFilePath("crtbegin.o")));
+    }
+  }
+
+  Args.AddAllArgs(CmdArgs, options::OPT_L);
+  ToolChain.AddFilePathLibArgs(Args, CmdArgs);
+  Args.AddAllArgs(CmdArgs,
+                  {options::OPT_T_Group, options::OPT_e, options::OPT_s,
+                   options::OPT_t, options::OPT_Z_Flag, options::OPT_r});
+
+  if (D.isUsingLTO()) {
+    assert(!Inputs.empty() && "Must have at least one input.");
+    addLTOOptions(ToolChain, Args, CmdArgs, Output, Inputs[0],
+                  D.getLTOMode() == LTOK_Thin);
+  }
+
+  AddLinkerInputs(ToolChain, Inputs, Args, CmdArgs, JA);
+
+  if (ToolChain.ShouldLinkCXXStdlib(Args))
+    ToolChain.AddCXXStdlibLibArgs(Args, CmdArgs);
+  if (!Args.hasArg(options::OPT_nostdlib, options::OPT_nodefaultlibs))
+    CmdArgs.push_back("-lc");
+
+  if (!Args.hasArg(options::OPT_nostdlib, options::OPT_nostartfiles)) {
+    if (Args.hasArg(options::OPT_shared) || Args.hasArg(options::OPT_pie))
+      CmdArgs.push_back(Args.MakeArgString(ToolChain.GetFilePath("crtendS.o")));
+    else
+      CmdArgs.push_back(Args.MakeArgString(ToolChain.GetFilePath("crtend.o")));
+    CmdArgs.push_back(Args.MakeArgString(ToolChain.GetFilePath("crtn.o")));
+  }
+
+  const char *Exec = Args.MakeArgString(ToolChain.GetLinkerPath());
+  C.addCommand(std::make_unique<Command>(JA, *this,
+                                         ResponseFileSupport::AtFileCurCP(),
+                                         Exec, CmdArgs, Inputs, Output));
+}
 
 AstraeaOS::AstraeaOS(const Driver &D, const llvm::Triple &Triple,
                      const ArgList &Args)
-    : ToolChain(D, Triple, Args) {
-  getFilePaths().push_back(getDriver().Dir + "/../lib");
-  gertFilePaths().push_back("/usr/lib");
+    : Generic_ELF(D, Triple, Args) {
+  getFilePaths().push_back(getDriver().SysRoot + "/usr/lib");
 }
 
 Tool *AstraeaOS::buildAssembler() const {
-  return new tools::AstraeaOS::Assemble(*this);
-}
-
-std::string AstraeaOS::ComputeEffectiveClangTriple(const ArgList &Args,
-                                                   types::ID InputType) const {
-  llvm::Triple Triple(ComputeLLVMTriple(Args, InputType));
-  return Triple.str();
+  return new tools::astraeaos::Assembler(*this);
 }
 
 Tool *AstraeaOS::buildLinker() const {
-  return new tools::AstraeaOS::Link(*this);
-}
-
-ToolChain::RuntimeLibType
-AstraeaOS::GetRuntimeLibType(const ArgList &Args) const {
-  if (Arg *A = Args.getLastArg(clang::driver::options::OPT_rtlib_EQ)) {
-    StringRef Value = A->getValue();
-    if (Value != "compiler-rt")
-      getDriver().Diag(clang::diag::err_drv_invalid_rtlib_name)
-          << A->getAsString(Args);
-  }
-  return ToolChain::RLT_CompilerRT;
-}
-
-ToolChain::UnwindLibType
-AstraeaOS::GetUnwindLibType(const ArgList &Args) const {
-  return ToolChain::UNW_CompilerRT;
-}
-
-void AstraeaOS::AddClangSystemIncludeArgs(const ArgList &DriverArgs,
-                                          ArgStringList &CC1Args) const {
-  const Driver &D = getDriver();
-
-  if (DriverArgs.hasArg(options::OPT_nostdinc))
-    return;
-
-  if (!DriverArgs.hasArg(options::OPT_nobuiltininc)) {
-    SmallString<128> P(D.ResourceDir);
-    llvm::sys::path::append(P, "include");
-    addSystemInclude(DriverArgs, CC1Args, P);
-  }
-
-  if (DriverArgs.hasArg(options::OPT_nostdlibinc))
-    return;
-
-  if (!D.SysRoot.empty()) {
-    SmallString<128> P(D.SysRoot);
-    llvm::sys::path::append(P, "include");
-    addExternCSystemInclude(DriverArgs, CC1Args, P.str());
-  }
+  return new tools::astraeaos::Linker(*this);
 }
