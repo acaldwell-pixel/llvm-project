@@ -36,7 +36,6 @@ public:
     return SelectionDAGISel::runOnMachineFunction(MF);
   }
 
-  void PreprocessISelDAG() override;
   void PostprocessISelDAG() override;
 
   void Select(SDNode *Node) override;

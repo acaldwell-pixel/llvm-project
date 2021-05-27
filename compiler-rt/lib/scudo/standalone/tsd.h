@@ -28,10 +28,13 @@ template <class Allocator> struct alignas(SCUDO_CACHE_LINE_SIZE) TSD {
   typename Allocator::QuarantineCacheT QuarantineCache;
   u8 DestructorIterations = 0;
 
-  void init(Allocator *Instance) {
-    DCHECK_EQ(DestructorIterations, 0U);
+  void initLinkerInitialized(Allocator *Instance) {
     Instance->initCache(&Cache);
     DestructorIterations = PTHREAD_DESTRUCTOR_ITERATIONS;
+  }
+  void init(Allocator *Instance) {
+    memset(this, 0, sizeof(*this));
+    initLinkerInitialized(Instance);
   }
 
   void commitBack(Allocator *Instance) { Instance->commitBack(this); }

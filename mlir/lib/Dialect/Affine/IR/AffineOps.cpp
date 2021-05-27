@@ -2641,6 +2641,8 @@ void AffineParallelOp::build(OpBuilder &builder, OperationState &result,
                              ArrayRef<AffineMap> lbMaps, ValueRange lbArgs,
                              ArrayRef<AffineMap> ubMaps, ValueRange ubArgs,
                              ArrayRef<int64_t> steps) {
+  assert(!lbMaps.empty() && "expected the lower bound map to be non-empty");
+  assert(!ubMaps.empty() && "expected the upper bound map to be non-empty");
   assert(llvm::all_of(lbMaps,
                       [lbMaps](AffineMap m) {
                         return m.getNumDims() == lbMaps[0].getNumDims() &&
@@ -2655,14 +2657,12 @@ void AffineParallelOp::build(OpBuilder &builder, OperationState &result,
                       }) &&
          "expected all upper bounds maps to have the same number of dimensions "
          "and symbols");
-  assert(lbMaps.empty() ||
-         lbMaps[0].getNumInputs() == lbArgs.size() &&
-             "expected lower bound maps to have as many inputs as lower bound "
-             "operands");
-  assert(ubMaps.empty() ||
-         ubMaps[0].getNumInputs() == ubArgs.size() &&
-             "expected upper bound maps to have as many inputs as upper bound "
-             "operands");
+  assert(lbMaps[0].getNumInputs() == lbArgs.size() &&
+         "expected lower bound maps to have as many inputs as lower bound "
+         "operands");
+  assert(ubMaps[0].getNumInputs() == ubArgs.size() &&
+         "expected upper bound maps to have as many inputs as upper bound "
+         "operands");
 
   result.addTypes(resultTypes);
 
@@ -2676,10 +2676,8 @@ void AffineParallelOp::build(OpBuilder &builder, OperationState &result,
 
   // Concatenates maps defined in the same input space (same dimensions and
   // symbols), assumes there is at least one map.
-  auto concatMapsSameInput = [&builder](ArrayRef<AffineMap> maps,
-                                        SmallVectorImpl<int32_t> &groups) {
-    if (maps.empty())
-      return AffineMap::get(builder.getContext());
+  auto concatMapsSameInput = [](ArrayRef<AffineMap> maps,
+                                SmallVectorImpl<int32_t> &groups) {
     SmallVector<AffineExpr> exprs;
     groups.reserve(groups.size() + maps.size());
     exprs.reserve(maps.size());
@@ -2687,6 +2685,7 @@ void AffineParallelOp::build(OpBuilder &builder, OperationState &result,
       llvm::append_range(exprs, m.getResults());
       groups.push_back(m.getNumResults());
     }
+    assert(!maps.empty() && "expected a non-empty list of maps");
     return AffineMap::get(maps[0].getNumDims(), maps[0].getNumSymbols(), exprs,
                           maps[0].getContext());
   };
@@ -2697,10 +2696,10 @@ void AffineParallelOp::build(OpBuilder &builder, OperationState &result,
   AffineMap ubMap = concatMapsSameInput(ubMaps, ubGroups);
   result.addAttribute(getLowerBoundsMapAttrName(), AffineMapAttr::get(lbMap));
   result.addAttribute(getLowerBoundsGroupsAttrName(),
-                      builder.getI32TensorAttr(lbGroups));
+                      builder.getI32VectorAttr(lbGroups));
   result.addAttribute(getUpperBoundsMapAttrName(), AffineMapAttr::get(ubMap));
   result.addAttribute(getUpperBoundsGroupsAttrName(),
-                      builder.getI32TensorAttr(ubGroups));
+                      builder.getI32VectorAttr(ubGroups));
   result.addAttribute(getStepsAttrName(), builder.getI64ArrayAttr(steps));
   result.addOperands(lbArgs);
   result.addOperands(ubArgs);
@@ -2791,6 +2790,7 @@ OpBuilder AffineParallelOp::getBodyBuilder() {
 void AffineParallelOp::setLowerBounds(ValueRange lbOperands, AffineMap map) {
   assert(lbOperands.size() == map.getNumInputs() &&
          "operands to map must match number of inputs");
+  assert(map.getNumResults() >= 1 && "bounds map has at least one result");
 
   auto ubOperands = getUpperBoundsOperands();
 
@@ -2804,6 +2804,7 @@ void AffineParallelOp::setLowerBounds(ValueRange lbOperands, AffineMap map) {
 void AffineParallelOp::setUpperBounds(ValueRange ubOperands, AffineMap map) {
   assert(ubOperands.size() == map.getNumInputs() &&
          "operands to map must match number of inputs");
+  assert(map.getNumResults() >= 1 && "bounds map has at least one result");
 
   SmallVector<Value, 4> newOperands(getLowerBoundsOperands());
   newOperands.append(ubOperands.begin(), ubOperands.end());
@@ -3061,7 +3062,7 @@ static ParseResult parseAffineMapWithMinMax(OpAsmParser &parser,
   if (succeeded(parser.parseOptionalRParen())) {
     result.addAttribute(
         mapName, AffineMapAttr::get(parser.getBuilder().getEmptyAffineMap()));
-    result.addAttribute(groupsName, parser.getBuilder().getI32TensorAttr({}));
+    result.addAttribute(groupsName, parser.getBuilder().getI32VectorAttr({}));
     return success();
   }
 
@@ -3133,7 +3134,7 @@ static ParseResult parseAffineMapWithMinMax(OpAsmParser &parser,
       dimRplacements, symRepacements, dimOperands.size(), symOperands.size());
 
   result.addAttribute(mapName, AffineMapAttr::get(flatMap));
-  result.addAttribute(groupsName, builder.getI32TensorAttr(numMapsPerGroup));
+  result.addAttribute(groupsName, builder.getI32VectorAttr(numMapsPerGroup));
   return success();
 }
 

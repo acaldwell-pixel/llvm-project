@@ -60,11 +60,11 @@ public:
 
   static bool canAllocate(uptr Size) { return Size <= SizeClassMap::MaxSize; }
 
-  void init(s32 ReleaseToOsInterval) {
+  void initLinkerInitialized(s32 ReleaseToOsInterval) {
     if (SCUDO_FUCHSIA)
       reportError("SizeClassAllocator32 is not supported on Fuchsia");
 
-    PossibleRegions.init();
+    PossibleRegions.initLinkerInitialized();
 
     u32 Seed;
     const u64 Time = getMonotonicTime();
@@ -80,6 +80,10 @@ public:
     }
     setOption(Option::ReleaseInterval, static_cast<sptr>(ReleaseToOsInterval));
   }
+  void init(s32 ReleaseToOsInterval) {
+    memset(this, 0, sizeof(*this));
+    initLinkerInitialized(ReleaseToOsInterval);
+  }
 
   void unmapTestOnly() {
     while (NumberOfStashedRegions > 0)
@@ -92,7 +96,6 @@ public:
         MinRegionIndex = Sci->MinRegionIndex;
       if (Sci->MaxRegionIndex > MaxRegionIndex)
         MaxRegionIndex = Sci->MaxRegionIndex;
-      *Sci = {};
     }
     for (uptr I = MinRegionIndex; I < MaxRegionIndex; I++)
       if (PossibleRegions[I])

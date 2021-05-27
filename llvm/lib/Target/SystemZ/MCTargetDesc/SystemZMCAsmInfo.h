@@ -19,7 +19,6 @@ enum SystemZAsmDialect { AD_ATT = 0, AD_HLASM = 1 };
 class SystemZMCAsmInfo : public MCAsmInfoELF {
 public:
   explicit SystemZMCAsmInfo(const Triple &TT);
-  bool isAcceptableChar(char C) const override;
 };
 
 } // end namespace llvm

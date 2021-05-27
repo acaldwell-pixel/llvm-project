@@ -81,8 +81,7 @@ bool shouldLowerLDSToStruct(const SmallPtrSetImpl<GlobalValue *> &UsedList,
         // variable to be put into a kernel's LDS structure because later
         // we will need to replace only this kernel's uses for which we
         // need to identify a using function.
-        if (!isUsedOnlyFromFunction(E, F))
-          return false;
+        return isUsedOnlyFromFunction(E, F);
       }
       for (const User *U : E->users()) {
         if (Visited.insert(U).second) {

@@ -26,14 +26,15 @@ public:
   using CacheT = struct MockCache { volatile scudo::uptr Canary; };
   using QuarantineCacheT = struct MockQuarantine {};
 
-  void init() {
+  void initLinkerInitialized() {
     // This should only be called once by the registry.
     EXPECT_FALSE(Initialized);
     Initialized = true;
   }
+  void reset() { memset(this, 0, sizeof(*this)); }
 
-  void unmapTestOnly() { TSDRegistry.unmapTestOnly(this); }
-  void initCache(CacheT *Cache) { *Cache = {}; }
+  void unmapTestOnly() { TSDRegistry.unmapTestOnly(); }
+  void initCache(CacheT *Cache) { memset(Cache, 0, sizeof(*Cache)); }
   void commitBack(scudo::TSD<MockAllocator> *TSD) {}
   TSDRegistryT *getTSDRegistry() { return &TSDRegistry; }
   void callPostInitCallback() {}
@@ -41,7 +42,7 @@ public:
   bool isInitialized() { return Initialized; }
 
 private:
-  bool Initialized = false;
+  bool Initialized;
   TSDRegistryT TSDRegistry;
 };
 
@@ -68,10 +69,11 @@ TEST(ScudoTSDTest, TSDRegistryInit) {
   };
   std::unique_ptr<AllocatorT, decltype(Deleter)> Allocator(new AllocatorT,
                                                            Deleter);
+  Allocator->reset();
   EXPECT_FALSE(Allocator->isInitialized());
 
   auto Registry = Allocator->getTSDRegistry();
-  Registry->init(Allocator.get());
+  Registry->initLinkerInitialized(Allocator.get());
   EXPECT_TRUE(Allocator->isInitialized());
 }
 
@@ -82,6 +84,7 @@ template <class AllocatorT> static void testRegistry() {
   };
   std::unique_ptr<AllocatorT, decltype(Deleter)> Allocator(new AllocatorT,
                                                            Deleter);
+  Allocator->reset();
   EXPECT_FALSE(Allocator->isInitialized());
 
   auto Registry = Allocator->getTSDRegistry();
@@ -150,6 +153,7 @@ template <class AllocatorT> static void testRegistryThreaded() {
   };
   std::unique_ptr<AllocatorT, decltype(Deleter)> Allocator(new AllocatorT,
                                                            Deleter);
+  Allocator->reset();
   std::thread Threads[32];
   for (scudo::uptr I = 0; I < ARRAY_SIZE(Threads); I++)
     Threads[I] = std::thread(stressCache<AllocatorT>, Allocator.get());
@@ -205,6 +209,7 @@ TEST(ScudoTSDTest, TSDRegistryTSDsCount) {
   };
   std::unique_ptr<AllocatorT, decltype(Deleter)> Allocator(new AllocatorT,
                                                            Deleter);
+  Allocator->reset();
   // We attempt to use as many TSDs as the shared cache offers by creating a
   // decent amount of threads that will be run concurrently and attempt to get
   // and lock TSDs. We put them all in a set and count the number of entries

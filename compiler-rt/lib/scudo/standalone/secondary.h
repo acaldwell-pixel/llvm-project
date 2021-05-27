@@ -71,6 +71,7 @@ static void unmap(LargeBlock::Header *H) {
 
 class MapAllocatorNoCache {
 public:
+  void initLinkerInitialized(UNUSED s32 ReleaseToOsInterval) {}
   void init(UNUSED s32 ReleaseToOsInterval) {}
   bool retrieve(UNUSED Options Options, UNUSED uptr Size, UNUSED uptr Alignment,
                 UNUSED LargeBlock::Header **H, UNUSED bool *Zeroed) {
@@ -120,13 +121,16 @@ public:
                     Config::SecondaryCacheEntriesArraySize,
                 "");
 
-  void init(s32 ReleaseToOsInterval) {
-    DCHECK_EQ(EntriesCount, 0U);
+  void initLinkerInitialized(s32 ReleaseToOsInterval) {
     setOption(Option::MaxCacheEntriesCount,
               static_cast<sptr>(Config::SecondaryCacheDefaultMaxEntriesCount));
     setOption(Option::MaxCacheEntrySize,
               static_cast<sptr>(Config::SecondaryCacheDefaultMaxEntrySize));
     setOption(Option::ReleaseInterval, static_cast<sptr>(ReleaseToOsInterval));
+  }
+  void init(s32 ReleaseToOsInterval) {
+    memset(this, 0, sizeof(*this));
+    initLinkerInitialized(ReleaseToOsInterval);
   }
 
   void store(Options Options, LargeBlock::Header *H) {
@@ -400,13 +404,15 @@ private:
 
 template <typename Config> class MapAllocator {
 public:
-  void init(GlobalStats *S, s32 ReleaseToOsInterval = -1) {
-    DCHECK_EQ(AllocatedBytes, 0U);
-    DCHECK_EQ(FreedBytes, 0U);
-    Cache.init(ReleaseToOsInterval);
-    Stats.init();
+  void initLinkerInitialized(GlobalStats *S, s32 ReleaseToOsInterval = -1) {
+    Cache.initLinkerInitialized(ReleaseToOsInterval);
+    Stats.initLinkerInitialized();
     if (LIKELY(S))
       S->link(&Stats);
+  }
+  void init(GlobalStats *S, s32 ReleaseToOsInterval = -1) {
+    memset(this, 0, sizeof(*this));
+    initLinkerInitialized(S, ReleaseToOsInterval);
   }
 
   void *allocate(Options Options, uptr Size, uptr AlignmentHint = 0,

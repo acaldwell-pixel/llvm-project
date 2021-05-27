@@ -32,7 +32,6 @@ class LegalizerInfo;
 class Legalizer;
 class MachineRegisterInfo;
 class GISelChangeObserver;
-class LostDebugLocObserver;
 class TargetLowering;
 
 class LegalizerHelper {
@@ -79,11 +78,10 @@ public:
   ///
   /// Considered as an opaque blob, the legal code will use and define the same
   /// registers as \p MI.
-  LegalizeResult legalizeInstrStep(MachineInstr &MI,
-                                   LostDebugLocObserver &LocObserver);
+  LegalizeResult legalizeInstrStep(MachineInstr &MI);
 
   /// Legalize an instruction by emiting a runtime library call instead.
-  LegalizeResult libcall(MachineInstr &MI, LostDebugLocObserver &LocObserver);
+  LegalizeResult libcall(MachineInstr &MI);
 
   /// Legalize an instruction by reducing the width of the underlying scalar
   /// type.
@@ -328,9 +326,6 @@ public:
   LegalizeResult fewerElementsVectorReductions(MachineInstr &MI,
                                                unsigned TypeIdx, LLT NarrowTy);
 
-  LegalizeResult fewerElementsVectorShuffle(MachineInstr &MI, unsigned TypeIdx,
-                                            LLT NarrowTy);
-
   LegalizeResult narrowScalarShift(MachineInstr &MI, unsigned TypeIdx, LLT Ty);
   LegalizeResult narrowScalarAddSub(MachineInstr &MI, unsigned TypeIdx,
                                     LLT NarrowTy);
@@ -413,9 +408,9 @@ createLibcall(MachineIRBuilder &MIRBuilder, RTLIB::Libcall Libcall,
               ArrayRef<CallLowering::ArgInfo> Args);
 
 /// Create a libcall to memcpy et al.
-LegalizerHelper::LegalizeResult
-createMemLibcall(MachineIRBuilder &MIRBuilder, MachineRegisterInfo &MRI,
-                 MachineInstr &MI, LostDebugLocObserver &LocObserver);
+LegalizerHelper::LegalizeResult createMemLibcall(MachineIRBuilder &MIRBuilder,
+                                                 MachineRegisterInfo &MRI,
+                                                 MachineInstr &MI);
 
 } // End namespace llvm.
 
