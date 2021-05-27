@@ -166,15 +166,25 @@ public:
 };
 // Astraea OS Target Info
 template <typename Target>
-class LLVM_LIBRARY_VISIBILITY AstraeaOSTargetInfo : public OSTargetInfo<Target> {
+class LLVM_LIBRARY_VISIBILITY AstraeaOSTargetInfo
+    : public OSTargetInfo<Target> {
 protected:
   void getOSDefines(const LangOptions &Opts, const llvm::Triple &Triple,
                     MacroBuilder &Builder) const override {
+    DefineStd(Builder, "unix", Opts);
     Builder.defineMacro("_ASTRAEAOS");
+    Builder.defineMacro("__ELF__");
+    if (Opts.POSIXThreads)
+      Builder.defineMacro("_REENTRANT");
+    // required by the libc++ locale support.
+    if (Opts.CPlusPlus)
+      Builder.defineMacro("_GNU_SOURCE");
+    Builder.defineMacro("__FLOAT128__");
   }
 
 public:
-  AstraeaOSTargetInfo(const llvm::Triple &Triple) : OSTargetInfo<Target>(Triple) {
+  AstraeaOSTargetInfo(const llvm::Triple &Triple)
+      : OSTargetInfo<Target>(Triple) {
     this->WIntType = TargetInfo::UnsignedInt;
     switch (Triple.getArch()) {
     default:
