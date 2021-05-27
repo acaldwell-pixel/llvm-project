@@ -2357,8 +2357,7 @@ private:
                          bool ReadAnyTokensBeforeDirective);
   void HandleEndifDirective(Token &EndifToken);
   void HandleElseDirective(Token &Result, const Token &HashToken);
-  void HandleElifFamilyDirective(Token &ElifToken, const Token &HashToken,
-                                 tok::PPKeywordKind Kind);
+  void HandleElifDirective(Token &ElifToken, const Token &HashToken);
 
   // Pragmas.
   void HandlePragmaDirective(PragmaIntroducer Introducer);

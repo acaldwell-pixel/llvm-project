@@ -20,8 +20,7 @@
 using namespace llvm;
 using namespace gsym;
 
-GsymCreator::GsymCreator(bool Quiet)
-    : StrTab(StringTableBuilder::ELF), Quiet(Quiet) {
+GsymCreator::GsymCreator() : StrTab(StringTableBuilder::ELF) {
   insertFile(StringRef());
 }
 
@@ -249,30 +248,25 @@ llvm::Error GsymCreator::finalize(llvm::raw_ostream &OS) {
                                // the latter.
                                return true;
                              } else {
-                               if (!Quiet) {
-                                 OS << "warning: same address range contains "
-                                       "different debug "
-                                    << "info. Removing:\n"
-                                    << Prev << "\nIn favor of this one:\n"
-                                    << Curr << "\n";
-                               }
+                               OS << "warning: same address range contains "
+                                     "different debug "
+                                  << "info. Removing:\n"
+                                  << Prev << "\nIn favor of this one:\n"
+                                  << Curr << "\n";
                                return true;
                              }
                            }
                          } else {
-                           if (!Quiet) { // print warnings about overlaps
-                             OS << "warning: function ranges overlap:\n"
-                                << Prev << "\n"
-                                << Curr << "\n";
-                           }
+                           // print warnings about overlaps
+                           OS << "warning: function ranges overlap:\n"
+                              << Prev << "\n"
+                              << Curr << "\n";
                          }
                        } else if (Prev.Range.size() == 0 &&
                                   Curr.Range.contains(Prev.Range.Start)) {
-                         if (!Quiet) {
-                           OS << "warning: removing symbol:\n"
-                              << Prev << "\nKeeping:\n"
-                              << Curr << "\n";
-                         }
+                         OS << "warning: removing symbol:\n"
+                            << Prev << "\nKeeping:\n"
+                            << Curr << "\n";
                          return true;
                        }
 
